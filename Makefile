@@ -1,11 +1,10 @@
 PREFIX = /usr/local
-VERSION = 1.1
+VERSION = 1-2-0
 
-CC = cc -m32
-CFLAGS = -g -Wall 
-LD = cc -m32
-LDFLAGS = -framework ApplicationServices
-RM = /bin/rm -f
+#this must be built 32 bit
+CFLAGS:=$(CFLAGS) -m32
+LDFLAGS:=$(LDFLAGS) -m32 -framework ApplicationServices
+
 SRC = Makefile pict2pdf.c
 DOC = README 
 TEST = sample.pict sample.orig.pdf
@@ -14,12 +13,11 @@ PROG = pict2pdf
 MANPAGE = pict2pdf.1
 DISTNAME = $(PROG)-$(VERSION)
 HTMLDOC = pict2pdf.html
-TEMPDMG = $(PROG).temp
 
 all: $(PROG)
 
 $(PROG): $(OBJS)
-	$(LD) $(LDFLAGS) $(OBJS) -o $(PROG)
+	$(CC) $(LDFLAGS) $(OBJS) -o $(PROG)
 
 html $(HTMLDOC): 
 	install -d $(PREFIX)/share/man/man1 
@@ -31,24 +29,11 @@ html $(HTMLDOC):
 test: sample.pict $(PROG)
 	./$(PROG) -f -r 10 -s 0.75 sample.pict
 	
-dmg: $(PROG) $(DOC) $(HTMLDOC)
-	hdiutil create $(TEMPDMG) -sectors 9000 -fs HFS+ -volname $(PROG)
-	hdiutil mount $(TEMPDMG).dmg
-	cp $(PROG) /Volumes/$(PROG)
-	cp $(DOC) /Volumes/$(PROG)
-	cp $(HTMLDOC) /Volumes/$(PROG)
-	hdiutil unmount /Volumes/$(PROG)
-	hdiutil convert $(TEMPDMG).dmg -format UDCO -o $(DISTNAME).dmg
-	rm $(TEMPDMG).dmg
-
 install: $(PROG) $(MANPAGES)
 	install -d $(PREFIX)/bin 
 	install $(PROG) $(PREFIX)/bin 
 	install -d $(PREFIX)/share/man/man1 
 	install -m 0644 $(MANPAGE) $(PREFIX)/share/man/man1
-	
-install-html: $(HTMLDOC)
-	scp $(HTMLDOC) prahl@shell.sourceforge.net:/home/groups/p/pi/pict2pdf/htdocs/index.html
 
 dist: $(SRC) $(MANPAGES) $(DOC) $(TEST)
 	mkdir $(DISTNAME)
@@ -56,9 +41,15 @@ dist: $(SRC) $(MANPAGES) $(DOC) $(TEST)
 	ln $(DOC)      $(DISTNAME)
 	ln $(TEST)     $(DISTNAME)
 	ln $(MANPAGE) $(DISTNAME)
-	tar cvf - $(DISTNAME) | gzip > $(DISTNAME).tar.gz
+#	tar cvf - $(DISTNAME) | gzip > $(DISTNAME).tar.gz
+	zip -r $(DISTNAME) $(DISTNAME)
 	rm -rf $(DISTNAME)
+
+appleclean:
+	sudo xattr -r -d com.apple.FinderInfo ./
+	sudo xattr -r -d com.apple.TextEncoding ./
+	sudo xattr -r -d com.apple.quarantine ./
 	
 clean:
 	rm -rf $(PROG) $(OBJS) $(HTMLDOC) sample.pdf
-	rm -rf $(DISTNAME) $(DISTNAME).tar.gz $(DISTNAME).dmg
+	rm -rf $(DISTNAME)
